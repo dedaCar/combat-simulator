@@ -1,77 +1,69 @@
+function getRandomInt(min, max) {
+	return Math.floor(Math.random() * (max - min)) + min;
+}
+
+function findRandomOpponent(warriors, id) {
+	const potentialOpponents = warriors.filter(warrior => warrior.id !== id);
+
+	return potentialOpponents[getRandomInt(0, potentialOpponents.length)];
+}
+
 class Unit {
 	constructor(name) {
+		this.id = name + Math.random();
 		this.name = name;
 		this.health = 100;
 		this.currentHealth = this.health;
 		this.lastActionTime = 0;
+		this.attack();
 	}
 
-	get rechargeTime() {
-		const customRechargeTime = 1000 * this.health / 100;
-		return customRechargeTime;
+	rechargeTime() {
+		return 1000 * this.health / 100;
 	}
 
-	get damage() {
-		const customDamage = this.health / 100;
-		return customDamage;
+	damage() {
+		return this.health / 100;
 	}
 
-	get criticalChance() {
-		const customCriticalChance = Math.floor(10 - this.currentHealth / 10);
-		return customCriticalChance;
-	}
-
-	get shouldAttack() {
-		const nextActionTime = this.lastActionTime + this.rechargeTime;
-		if (nextActionTime <= new Date().getTime()) {
-			return true;
+	criticalChance() {
+		const chance = 10 - this.currentHealth / 10;
+		if (chance >= Math.floor(Math.random() * 100)) {
+			return chance;
 		}
-		return false;
+		return 0;
+	}
+	attack() {
+		setTimeout(() => {
+			// if you are dead, remove yourself from battle
+			if (this.health < 1) {
+				warriors = warriors.filter(warrior => warrior.id !== this.id);
+				console.log(`${this.name} LOST!`);
+				return;
+			}
+			// find opponent
+			const opponent = findRandomOpponent(warriors, this.id);
+
+			if (!opponent) {
+				// no opponents left, you won
+				console.log(`${this.name} WON!`);
+				return;
+			}
+
+			const damage = this.damage() + this.criticalChance();
+			console.log(`${this.name}{${this.health} HP} attacked ${opponent.name} {${opponent.health} HP} for ${damage}`);
+			opponent.health -= damage;
+
+			this.attack();
+		}, this.rechargeTime);
 	}
 }
 
-const warriors = [
-	new Unit('one'),
-	new Unit('two'),
-	new Unit('three'),
-	new Unit('four'),
-	new Unit('five'),
+
+let warriors = [
+	new Unit('one', 0),
+	new Unit('two', 1),
+	new Unit('three', 2),
+	new Unit('four', 3),
+	new Unit('five', 4),
 ];
-let isRunning = true;
-let currentTime = new Date().getTime();
-
-while (isRunning) {
-	const crit = Math.floor(Math.random() * 100);
-	currentTime = new Date().getTime();
-
-	for (let i = 0; i < warriors.length; i += 1) {
-		const warrior = warriors[i];
-		if (warrior.currentHealth <= 0) {
-			warriors.splice(i, 1);
-		}
-
-		if (warrior.shouldAttack) {
-			const opponents = warriors.slice();
-			opponents.splice(i, 1);
-
-			const opponent = opponents[Math.floor(Math.random() * opponents.length)];
-
-			if (warrior.criticalChance >= crit) {
-				opponent.currentHealth -= warrior.damage + warrior.criticalChance;
-				console.log(`${warrior.name}{${warrior.currentHealth} HP} attacked ${opponent.name} {${opponent.currentHealth} HP} for ${warrior.damage + warrior.criticalChance}`);
-			} else {
-				opponent.currentHealth -= warrior.damage;
-				console.log(`${warrior.name}{${warrior.currentHealth} HP} attacked ${opponent.name} {${opponent.currentHealth} HP} for ${warrior.damage}`);
-			}
-
-
-			warrior.lastActionTime = currentTime;
-
-			if (warriors.length <= 2) {
-				console.log(`Survivor(s): ${JSON.stringify(warriors)}`);
-				isRunning = false;
-				break;
-			}
-		}
-	}
-}
